@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CORTEX Stroke Risk Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* Backgrounds */
+  --bg:           #243447;
+  --bg2:          #2d3f55;
+  --surface:      #ffffff;
+  --surface2:     #f7f9fb;
+  --surface3:     #eef2f7;
+
+  /* Borders */
+  --border:       #e2e8f0;
+  --border2:      #cbd5e1;
+
+  /* Text */
+  --text:         #0f172a;
+  --text2:        #475569;
+  --text3:        #94a3b8;
+
+  /* Accent — mint as signature */
+  --mint:         #83e6d7;
+  --mint-dark:    #3dbfaa;
+  --mint-deep:    #0d7a68;
+  --mint-dim:     rgba(131,230,215,0.12);
+  --mint-border:  rgba(131,230,215,0.25);
+
+  /* Semantic */
+  --low:          #16a34a;
+  --low-bg:       #f0fdf4;
+  --low-border:   #bbf7d0;
+
+  --int:          #d97706;
+  --int-bg:       #fffbeb;
+  --int-border:   #fde68a;
+
+  --high:         #dc2626;
+  --high-bg:      #fef2f2;
+  --high-border:  #fecaca;
+
+  --ce:           #dc2626;
+  --ce-bg:        #fef2f2;
+  --at:           #2563eb;
+  --at-bg:        #eff6ff;
+  --mix:          #475569;
+  --mix-bg:       #f8fafc;
+
+  --radius:       9px;
+  --radius-lg:    13px;
+  --shadow:       0 1px 3px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.05);
+  --shadow-md:    0 4px 16px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.06);
+  --t:            0.17s cubic-bezier(0.4,0,0.2,1);
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:'DM Sans',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  font-size:15px;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ── HEADER ─────────────────────────────────────── */
+.header{
+  background:var(--bg2);
+  border-bottom:1px solid rgba(131,230,215,0.15);
+  padding:32px 24px 28px;
+  text-align:center;
+  position:relative;
+  overflow:hidden;
+}
+.header::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse 70% 80% at 50% -10%,
+    rgba(131,230,215,0.07) 0%, transparent 70%);
+  pointer-events:none;
+}
+.header-eyebrow{
+  display:inline-flex;align-items:center;gap:6px;
+  background:var(--mint-dim);
+  border:1px solid var(--mint-border);
+  border-radius:20px;padding:4px 13px;
+  font-size:10.5px;font-weight:500;
+  color:var(--mint);
+  letter-spacing:0.09em;text-transform:uppercase;
+  margin-bottom:16px;
+}
+.header-eyebrow-dot{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--mint);
+  animation:pulse 2.4s ease-in-out infinite;
+}
+@keyframes pulse{
+  0%,100%{opacity:1;transform:scale(1)}
+  50%{opacity:0.5;transform:scale(0.8)}
+}
+.header-title{
+  font-family:'DM Serif Display',serif;
+  font-size:clamp(24px,4vw,36px);
+  font-weight:400;color:#fff;
+  letter-spacing:-0.025em;line-height:1.1;
+}
+.header-title em{
+  color:var(--mint);
+  font-style:italic;
+  font-weight:400;
+}
+.header-sub{
+  color:rgba(255,255,255,0.38);
+  font-size:12.5px;margin-top:10px;
+  font-weight:300;letter-spacing:0.01em;
+}
+
+/* ── LAYOUT ─────────────────────────────────────── */
+.main{
+  max-width:1100px;margin:0 auto;
+  padding:28px 20px 64px;
+  display:grid;grid-template-columns:430px 1fr;
+  gap:20px;align-items:start;
+}
+@media(max-width:860px){.main{grid-template-columns:1fr}}
+
+/* ── CARDS ─────────────────────────────────────── */
+.card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+  padding:20px 22px;
+  margin-bottom:14px;
+  box-shadow:var(--shadow);
+}
+.card:last-child{margin-bottom:0}
+.card-title{
+  font-size:13px;font-weight:600;
+  color:var(--text2);
+  text-transform:uppercase;letter-spacing:0.07em;
+  margin-bottom:16px;padding-bottom:11px;
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:9px;
+}
+.card-title-num{
+  width:19px;height:19px;border-radius:50%;
+  background:var(--mint-dim);
+  border:1px solid var(--mint-border);
+  color:var(--mint-deep);
+  font-family:'DM Mono',monospace;font-size:10px;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;font-weight:500;
+}
+
+/* Section A/B/C/D result cards — dark header stripe */
+.result-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+  margin-bottom:14px;
+  box-shadow:var(--shadow);
+  overflow:hidden;
+}
+.result-card:last-of-type{margin-bottom:0}
+.result-card-header{
+  background:var(--bg2);
+  border-bottom:1px solid rgba(131,230,215,0.12);
+  padding:12px 20px;
+  display:flex;align-items:center;gap:9px;
+}
+.result-card-letter{
+  width:22px;height:22px;border-radius:6px;
+  background:var(--mint-dim);
+  border:1px solid var(--mint-border);
+  color:var(--mint);
+  font-family:'DM Mono',monospace;font-size:11px;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;font-weight:500;
+}
+.result-card-title{
+  font-size:12.5px;font-weight:600;
+  color:rgba(255,255,255,0.75);
+  letter-spacing:0.04em;
+}
+.result-card-body{padding:18px 20px}
+
+/* ── FORM ─────────────────────────────────────── */
+.field{margin-bottom:14px}
+.field:last-child{margin-bottom:0}
+.label{
+  display:block;font-size:12px;font-weight:600;
+  color:var(--text2);margin-bottom:5px;
+  text-transform:uppercase;letter-spacing:0.05em;
+}
+.label-hint{
+  font-weight:400;color:var(--text3);
+  font-size:11px;text-transform:none;letter-spacing:0;
+}
+.comp-label{font-size:11px;color:var(--text3);margin-bottom:3px}
+.comp-row{display:grid;gap:8px;margin-bottom:8px}
+.comp-row-2{grid-template-columns:1fr 1fr}
+
+input[type="number"]{
+  width:100%;background:#fff;
+  border:1px solid var(--border);
+  border-radius:var(--radius);color:var(--text);
+  font-family:'DM Mono',monospace;font-size:14px;
+  padding:8px 12px;outline:none;
+  transition:border-color var(--t),box-shadow var(--t);
+  -moz-appearance:textfield;
+}
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none}
+input[type="number"]:focus{
+  border-color:var(--mint-dark);
+  box-shadow:0 0 0 3px rgba(131,230,215,0.18);
+}
+input[type="number"].error{border-color:var(--high)}
+input[type="number"]:read-only{
+  background:var(--surface3);color:var(--text3);
+  cursor:default;border-style:dashed;
+}
+
+/* Mode tabs */
+.mode-tabs{
+  display:flex;margin-bottom:10px;
+  border:1px solid var(--border);
+  border-radius:var(--radius);overflow:hidden;
+  background:var(--surface3);
+}
+.mode-tab{
+  flex:1;padding:6px 10px;background:transparent;
+  border:none;color:var(--text3);
+  font-family:'DM Sans',sans-serif;font-size:12px;
+  cursor:pointer;transition:all var(--t);
+  text-align:center;font-weight:400;
+}
+.mode-tab:not(:last-child){border-right:1px solid var(--border)}
+.mode-tab.active{
+  background:var(--mint-deep);color:#fff;font-weight:500;
+}
+.mode-tab:hover:not(.active){
+  background:var(--surface2);color:var(--text2);
+}
+
+/* Computed box */
+.computed-box{
+  background:linear-gradient(135deg,#f0fdfb 0%,#e8f8f5 100%);
+  border:1px solid rgba(61,191,170,0.30);
+  border-radius:var(--radius);
+  padding:9px 13px;
+  display:flex;align-items:center;justify-content:space-between;
+  margin-top:6px;
+}
+.computed-label{font-size:12px;color:var(--text2)}
+.computed-value{
+  font-family:'DM Mono',monospace;font-size:14px;
+  font-weight:600;color:var(--mint-deep);
+}
+.computed-value.na{color:var(--text3);font-size:12px;font-weight:400}
+
+/* Toggle */
+.toggle-group{display:flex;gap:6px}
+.toggle-btn{
+  flex:1;padding:7px 10px;
+  border-radius:var(--radius);
+  border:1px solid var(--border);
+  background:var(--surface2);color:var(--text3);
+  font-family:'DM Sans',sans-serif;font-size:13px;
+  cursor:pointer;transition:all var(--t);text-align:center;
+}
+.toggle-btn:hover{border-color:var(--border2);color:var(--text2);background:#fff}
+.toggle-btn.active{
+  background:var(--mint-deep);border-color:var(--mint-deep);
+  color:#fff;font-weight:500;
+  box-shadow:0 2px 8px rgba(13,122,104,0.25);
+}
+
+/* Select */
+select{
+  width:100%;background:#fff;
+  border:1px solid var(--border);border-radius:var(--radius);
+  color:var(--text);font-family:'DM Sans',sans-serif;font-size:13.5px;
+  padding:8px 12px;outline:none;cursor:pointer;
+  transition:border-color var(--t);appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%230d7a68' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 12px center;padding-right:32px;
+}
+select:focus{border-color:var(--mint-dark);box-shadow:0 0 0 3px rgba(131,230,215,0.18)}
+select option{background:#fff}
+
+/* Calculate button */
+.calc-btn{
+  width:100%;padding:13px;border-radius:var(--radius);border:none;
+  background:linear-gradient(135deg,var(--mint-deep) 0%,var(--mint-dark) 100%);
+  color:#fff;font-family:'DM Sans',sans-serif;
+  font-size:14.5px;font-weight:600;cursor:pointer;
+  letter-spacing:0.03em;transition:all var(--t);
+  box-shadow:0 4px 14px rgba(13,122,104,0.35);margin-top:4px;
+}
+.calc-btn:hover{
+  background:linear-gradient(135deg,#0a6557 0%,#32a896 100%);
+  transform:translateY(-1px);
+  box-shadow:0 6px 20px rgba(13,122,104,0.42);
+}
+.calc-btn:active{transform:translateY(0)}
+
+/* ── RESULTS ─────────────────────────────────────── */
+.results-col{position:sticky;top:20px}
+.risk-display{display:none}
+.placeholder-card{
+  background:var(--bg2);
+  border:1px solid rgba(131,230,215,0.10);
+  border-radius:var(--radius-lg);
+  padding:52px 24px;text-align:center;
+}
+.placeholder-icon{
+  width:48px;height:48px;margin:0 auto 14px;
+  border-radius:50%;
+  background:var(--mint-dim);
+  border:1px solid var(--mint-border);
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;
+}
+.placeholder-msg p{font-size:13px;line-height:1.8;color:rgba(255,255,255,0.35)}
+.placeholder-msg strong{color:rgba(255,255,255,0.65)}
+
+/* Risk tier badge */
+.risk-tier-badge{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:5px 13px;border-radius:20px;
+  font-size:11.5px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;
+}
+.risk-tier-badge.low{background:var(--low-bg);border:1px solid var(--low-border);color:var(--low)}
+.risk-tier-badge.intermediate{background:var(--int-bg);border:1px solid var(--int-border);color:var(--int)}
+.risk-tier-badge.high{background:var(--high-bg);border:1px solid var(--high-border);color:var(--high)}
+
+/* CIF boxes */
+.cif-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.cif-box{
+  background:var(--surface2);
+  border:1px solid var(--border);
+  border-radius:var(--radius);padding:14px;text-align:center;
+}
+.cif-label{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.09em;margin-bottom:3px}
+.cif-value{font-family:'DM Serif Display',serif;font-size:30px;font-weight:400;line-height:1;margin-bottom:2px}
+.cif-value.low{color:var(--low)}.cif-value.intermediate{color:var(--int)}.cif-value.high{color:var(--high)}
+.cif-sublabel{font-size:10px;color:var(--text3)}
+
+/* Risk bar */
+.risk-bar-wrap{margin-bottom:4px}
+.risk-bar-label{font-size:10px;color:var(--text3);margin-bottom:5px;display:flex;justify-content:space-between}
+.risk-bar-track{height:6px;border-radius:3px;background:linear-gradient(90deg,var(--low) 0%,var(--int) 50%,var(--high) 100%);position:relative}
+.risk-bar-thumb{
+  width:12px;height:12px;border-radius:50%;
+  background:#fff;border:2px solid var(--mint-deep);
+  position:absolute;top:50%;transform:translate(-50%,-50%);
+  box-shadow:0 1px 4px rgba(0,0,0,0.20);
+  transition:left 0.5s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* MBS */
+.mbs-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.mbs-track{height:8px;border-radius:4px;background:linear-gradient(90deg,var(--at) 0%,#e2e8f0 48%,var(--ce) 100%);position:relative;margin-bottom:5px}
+.mbs-thumb{
+  width:14px;height:14px;border-radius:50%;
+  background:#fff;border:2px solid var(--mint-deep);
+  position:absolute;top:50%;transform:translate(-50%,-50%);
+  box-shadow:0 1px 4px rgba(0,0,0,0.18);
+  transition:left 0.5s cubic-bezier(0.4,0,0.2,1);
+}
+.mbs-axis{display:flex;justify-content:space-between}
+.mbs-axis span{font-size:9.5px;color:var(--text3);font-family:'DM Mono',monospace}
+.mbs-badge{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:4px 11px;border-radius:20px;
+  font-size:11.5px;font-weight:600;letter-spacing:0.03em;
+}
+.mbs-badge.ce{background:var(--ce-bg);border:1px solid var(--high-border);color:var(--ce)}
+.mbs-badge.at{background:var(--at-bg);border:1px solid #bfdbfe;color:var(--at)}
+.mbs-badge.mixed{background:var(--mix-bg);border:1px solid var(--border);color:var(--mix)}
+
+/* SHAP bars */
+.shap-bars{margin-top:10px}
+.shap-row{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.shap-var-name{font-size:11.5px;color:var(--text2);width:115px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.shap-bar-track{flex:1;height:5px;background:var(--surface3);border-radius:3px;position:relative;overflow:hidden}
+.shap-bar-fill{position:absolute;top:0;bottom:0;border-radius:3px;transition:width 0.4s ease}
+.shap-val{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);width:52px;text-align:right;flex-shrink:0}
+
+/* CDSS */
+.cdss-card{border-radius:var(--radius);padding:14px 16px;margin-top:2px}
+.cdss-card.routine{background:var(--low-bg);border:1px solid var(--low-border)}
+.cdss-card.timely{background:var(--int-bg);border:1px solid var(--int-border)}
+.cdss-card.priority{background:var(--high-bg);border:1px solid var(--high-border)}
+.cdss-card.urgent{background:#fff0f0;border:1px solid #f87171}
+.cdss-urgency{font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:7px}
+.cdss-urgency.routine{color:var(--low)}.cdss-urgency.timely{color:var(--int)}.cdss-urgency.priority,.cdss-urgency.urgent{color:var(--high)}
+.cdss-action{font-size:13px;line-height:1.7;color:var(--text)}
+.cdss-action-line{display:flex;align-items:flex-start;gap:7px;margin-bottom:2px}
+.cdss-action-line::before{content:'→';color:var(--text3);flex-shrink:0;font-size:11px;margin-top:2px}
+
+/* Counterfactual */
+.cf-scenario{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 13px;
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:var(--radius);margin-bottom:7px;
+  transition:border-color var(--t),box-shadow var(--t);
+}
+.cf-scenario:hover{border-color:var(--border2);box-shadow:var(--shadow)}
+.cf-scenario-label{font-size:13px;color:var(--text);font-weight:500}
+.cf-scenario-detail{font-size:10.5px;color:var(--text3);margin-top:2px}
+.cf-delta{font-family:'DM Mono',monospace;font-size:13px;font-weight:600;color:var(--low);flex-shrink:0;margin-left:10px}
+.cf-delta.zero{color:var(--text3);font-weight:400}
+.cf-new-risk{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);text-align:right}
+
+/* Misc */
+.section-divider{border:none;border-top:1px solid var(--border);margin:13px 0}
+.section-label{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:9px}
+.disclaimer{
+  background:rgba(255,255,255,0.04);
+  border:1px solid rgba(255,255,255,0.07);
+  border-radius:var(--radius);padding:11px 14px;
+  font-size:11px;color:rgba(255,255,255,0.28);
+  line-height:1.6;margin-top:12px;text-align:center;
+}
+.field-error{font-size:11px;color:var(--high);margin-top:4px;display:none}
+.field-error.show{display:block}
+
+footer{
+  text-align:center;padding:20px;
+  color:rgba(255,255,255,0.28);font-size:11.5px;
+  border-top:1px solid rgba(255,255,255,0.06);
+  line-height:1.9;
+}
+footer a{color:var(--mint);text-decoration:none;opacity:0.8}
+footer a:hover{opacity:1}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.animate-in{animation:fadeUp 0.32s ease forwards}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-eyebrow">
+    <span class="header-eyebrow-dot"></span>
+    Clinical Decision Support
+  </div>
+  <h1 class="header-title">CORTEX <em>Stroke Risk</em> Calculator</h1>
+  <p class="header-sub">Explainable ML · Competing-risks survival model · Non-AF cardiovascular inpatients</p>
+</header>
+
+<main class="main">
+<div class="input-col">
+
+  <!-- 1. Demographics -->
+  <div class="card">
+    <div class="card-title"><span class="card-title-num">1</span>Demographics</div>
+    <div class="field">
+      <label class="label" for="age">Age <span class="label-hint">(years)</span></label>
+      <input type="number" id="age" placeholder="e.g. 68" min="18" max="110" step="1" oninput="onAgeChange()">
+      <div class="field-error" id="age-err">Please enter age between 18–110</div>
+    </div>
+    <div class="field">
+      <label class="label">Sex</label>
+      <div class="toggle-group">
+        <button class="toggle-btn active" id="sex-male"   onclick="setSex(1,this)">Male</button>
+        <button class="toggle-btn"        id="sex-female" onclick="setSex(2,this)">Female</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Comorbidities -->
+  <div class="card">
+    <div class="card-title"><span class="card-title-num">2</span>Comorbidities</div>
+    <div class="field">
+      <label class="label">Prior ischaemic stroke</label>
+      <div class="toggle-group">
+        <button class="toggle-btn active" onclick="setToggle('stroke',0,this)">No</button>
+        <button class="toggle-btn"        onclick="setToggle('stroke',1,this)">Yes</button>
+      </div>
+    </div>
+    <div class="field">
+      <label class="label">Diabetes mellitus</label>
+      <div class="toggle-group">
+        <button class="toggle-btn active" onclick="setToggle('dm',0,this)">No</button>
+        <button class="toggle-btn"        onclick="setToggle('dm',1,this)">Yes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Echocardiography -->
+  <div class="card">
+    <div class="card-title"><span class="card-title-num">3</span>Echocardiography</div>
+    <div class="field">
+      <label class="label" for="hf">Heart failure status and phenotype</label>
+      <select id="hf" onchange="state.hf=+this.value">
+        <option value="0" selected>No heart failure</option>
+        <option value="1">HFpEF or HFmrEF (LVEF ≥40%)</option>
+        <option value="2">HFrEF (LVEF &lt;40%)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label class="label">Significant aortic stenosis <span class="label-hint">(grade 3–5)</span></label>
+      <div class="toggle-group">
+        <button class="toggle-btn active" onclick="setToggle('as',0,this)">No</button>
+        <button class="toggle-btn"        onclick="setToggle('as',1,this)">Yes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Laboratory -->
+  <div class="card">
+    <div class="card-title">
+      <span class="card-title-num">4</span>Laboratory
+      <span class="label-hint" style="font-family:'DM Sans',sans-serif;font-size:11.5px;font-weight:400;text-transform:none;letter-spacing:0">— at discharge</span>
+    </div>
+
+    <!-- eGFR -->
+    <div class="field">
+      <label class="label">eGFR <span class="label-hint">(mL/min/1.73m²)</span></label>
+      <div class="mode-tabs">
+        <button class="mode-tab active" onclick="setEGFRMode('direct',this)">Enter eGFR directly</button>
+        <button class="mode-tab"        onclick="setEGFRMode('ckdepi',this)">Calculate via CKD-EPI 2021</button>
+      </div>
+      <div id="egfr-direct">
+        <input type="number" id="egfr-val" placeholder="e.g. 65" min="5" max="200" step="0.1">
+      </div>
+      <div id="egfr-ckdepi" class="hidden">
+        <div class="comp-row comp-row-2">
+          <div>
+            <div class="comp-label">Serum creatinine <span style="opacity:0.7">(mg/dL)</span></div>
+            <input type="number" id="creat" placeholder="e.g. 1.0" min="0.2" max="20" step="0.01" oninput="computeEGFR()">
+          </div>
+          <div>
+            <div class="comp-label">Age <span style="opacity:0.7">(auto-filled)</span></div>
+            <input type="number" id="egfr-age" placeholder="—" readonly>
+          </div>
+        </div>
+        <!-- Sex is mirrored from Demographics — shown as read-only info -->
+        <div style="margin-bottom:8px">
+          <div class="comp-label">Sex <span style="opacity:0.7">(mirrored from Demographics)</span></div>
+          <div id="ckd-sex-display" style="
+            background:var(--surface3);border:1px dashed var(--border2);
+            border-radius:var(--radius);padding:7px 12px;
+            font-size:13px;color:var(--text2);font-family:'DM Sans',sans-serif;
+          ">Male</div>
+        </div>
+        <div class="computed-box">
+          <span class="computed-label">Calculated eGFR (mL/min/1.73m²)</span>
+          <span class="computed-value na" id="egfr-display">Enter creatinine</span>
+        </div>
+      </div>
+      <div class="field-error" id="egfr-err">Please provide a valid eGFR value</div>
+    </div>
+
+    <!-- NLR -->
+    <div class="field">
+      <label class="label">NLR <span class="label-hint">(Neutrophil-to-Lymphocyte Ratio)</span></label>
+      <div class="mode-tabs">
+        <button class="mode-tab active" onclick="setNLRMode('direct',this)">Enter NLR directly</button>
+        <button class="mode-tab"        onclick="setNLRMode('components',this)">Calculate from counts</button>
+      </div>
+      <div id="nlr-direct">
+        <input type="number" id="nlr-val" placeholder="e.g. 3.2" min="0.5" max="50" step="0.01">
+      </div>
+      <div id="nlr-components" class="hidden">
+        <div class="comp-row comp-row-2">
+          <div>
+            <div class="comp-label">Neutrophils <span style="opacity:0.7">(×10⁹/L)</span></div>
+            <input type="number" id="neut" placeholder="e.g. 6.8" min="0.1" max="50" step="0.01" oninput="computeNLR()">
+          </div>
+          <div>
+            <div class="comp-label">Lymphocytes <span style="opacity:0.7">(×10⁹/L)</span></div>
+            <input type="number" id="lymph" placeholder="e.g. 1.8" min="0.05" max="20" step="0.01" oninput="computeNLR()">
+          </div>
+        </div>
+        <div class="computed-box">
+          <span class="computed-label">Calculated NLR</span>
+          <span class="computed-value na" id="nlr-display">Enter counts</span>
+        </div>
+      </div>
+      <div class="field-error" id="nlr-err">Please provide a valid NLR value</div>
+    </div>
+
+    <!-- Haemoglobin -->
+    <div class="field">
+      <label class="label" for="hb">Haemoglobin <span class="label-hint">(g/dL)</span></label>
+      <input type="number" id="hb" placeholder="e.g. 13.5" min="4" max="20" step="0.1">
+      <div class="field-error" id="hb-err">Please enter Hb between 4–20 g/dL</div>
+    </div>
+  </div>
+
+  <button class="calc-btn" onclick="calculate()">Calculate CORTEX Score</button>
+
+</div>
+
+<!-- RESULTS -->
+<div class="results-col">
+
+  <div id="placeholder" class="placeholder-card">
+    <div class="placeholder-msg">
+      <div class="placeholder-icon">◎</div>
+      <p>Enter patient values and press<br>
+        <strong>Calculate CORTEX Score</strong><br>
+        to generate the risk assessment,<br>
+        mechanistic profile, and<br>
+        clinical recommendations.</p>
+    </div>
+  </div>
+
+  <div id="risk-display" class="risk-display">
+
+    <!-- A: Risk -->
+    <div class="result-card animate-in">
+      <div class="result-card-header">
+        <span class="result-card-letter">A</span>
+        <span class="result-card-title">CORTEX Stroke Risk</span>
+        <div style="margin-left:auto;font-family:'DM Mono',monospace;font-size:11.5px;color:rgba(255,255,255,0.30)">
+          LP = <span id="lp-val">—</span>
+        </div>
+      </div>
+      <div class="result-card-body">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+          <div>
+            <div class="section-label" style="margin-bottom:5px">Risk Tier</div>
+            <div id="tier-badge" class="risk-tier-badge low">● Low Risk</div>
+          </div>
+        </div>
+        <div class="cif-row">
+          <div class="cif-box">
+            <div class="cif-label">2-Year Risk</div>
+            <div id="cif2" class="cif-value low">—</div>
+            <div class="cif-sublabel">cumulative incidence</div>
+          </div>
+          <div class="cif-box">
+            <div class="cif-label">5-Year Risk</div>
+            <div id="cif5" class="cif-value low">—</div>
+            <div class="cif-sublabel">cumulative incidence</div>
+          </div>
+        </div>
+        <div class="risk-bar-wrap">
+          <div class="risk-bar-label"><span>Low &lt;1%</span><span>Intermediate 1–3%</span><span>High ≥3%</span></div>
+          <div class="risk-bar-track"><div id="risk-thumb" class="risk-bar-thumb" style="left:5%"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- B: MBS -->
+    <div class="result-card animate-in" style="animation-delay:0.07s">
+      <div class="result-card-header">
+        <span class="result-card-letter">B</span>
+        <span class="result-card-title">Mechanistic Balance Score</span>
+        <div style="margin-left:auto;font-family:'DM Mono',monospace;font-size:13px;font-weight:500" id="mbs-val-header">—</div>
+      </div>
+      <div class="result-card-body">
+        <div class="mbs-row">
+          <div>
+            <div class="section-label" style="margin-bottom:5px">Mechanistic Profile</div>
+            <div id="mbs-badge" class="mbs-badge mixed">Mixed / Uncertain</div>
+          </div>
+          <div style="text-align:right">
+            <div class="section-label" style="margin-bottom:5px">MBS Score</div>
+            <div id="mbs-val" style="font-family:'DM Mono',monospace;font-size:22px;font-weight:500;color:var(--mix)">—</div>
+          </div>
+        </div>
+        <div class="mbs-track"><div id="mbs-thumb" class="mbs-thumb" style="left:50%"></div></div>
+        <div class="mbs-axis"><span>−1.0 Atherothrombotic</span><span>0</span><span>Cardioembolic +1.0</span></div>
+        <div class="section-divider"></div>
+        <div class="section-label">Variable contributions</div>
+        <div class="shap-bars" id="shap-bars"></div>
+      </div>
+    </div>
+
+    <!-- C: CDSS -->
+    <div class="result-card animate-in" style="animation-delay:0.14s">
+      <div class="result-card-header">
+        <span class="result-card-letter">C</span>
+        <span class="result-card-title">Clinical Decision Support</span>
+      </div>
+      <div class="result-card-body" id="cdss-content"></div>
+    </div>
+
+    <!-- D: Counterfactual -->
+    <div class="result-card animate-in" style="animation-delay:0.21s">
+      <div class="result-card-header">
+        <span class="result-card-letter">D</span>
+        <span class="result-card-title">Estimated Risk Reduction</span>
+        <span style="margin-left:6px;font-size:11px;color:rgba(255,255,255,0.30);font-style:italic">if optimised</span>
+      </div>
+      <div class="result-card-body">
+        <div id="cf-content"></div>
+        <div class="disclaimer">Counterfactual estimates are illustrative (Cox LP substitution). Not causal treatment effects.</div>
+      </div>
+    </div>
+
+    <div class="disclaimer">This tool supports clinical decision-making and does not replace individualised assessment or guideline-directed therapy.</div>
+
+  </div>
+</div>
+</main>
+
+<footer>
+  <div>CORTEX Score · Samaras et al. · External validation C-index 0.807</div>
+  <div><a href="https://athsamaras.github.io/cortex-calculator" target="_blank">athsamaras.github.io/cortex-calculator</a> &nbsp;·&nbsp; For research and clinical support use only</div>
+</footer>
+
+<script>
+const COEFS={Age:0.59282962,Sex:0.10126141,Stroke:0.28485057,DM:0.03662385,HFplusLVEF_Simplified:0.07195617,eGFR_DIS:-0.14877806,NLRdis:0.16223070,HBdis:-0.10069265,ASgraded:0.07405171};
+const SCALER_MEAN={Age:65.70589979,Sex:1.31989327,Stroke:0.05138848,DM:0.27334717,HFplusLVEF_Simplified:0.53206839,eGFR_DIS:74.32996215,NLRdis:3.07870668,HBdis:12.97345149,ASgraded:0.03804724};
+const SCALER_SCALE={Age:15.05317766,Sex:0.46643495,Stroke:0.22078882,DM:0.44567757,HFplusLVEF_Simplified:0.79635893,eGFR_DIS:23.39123401,NLRdis:1.97538498,HBdis:1.64786993,ASgraded:0.19131034};
+const LP_CUT_LOW=-0.36232198,LP_CUT_HIGH=1.07406345;
+const H0_2YR=0.0080585855,H0_5YR=0.0155909367;
+const RECAL_A_2YR=-0.3354549060703083,RECAL_A_5YR=-0.35706664561720275;
+const MBS_WEIGHTS={HFplusLVEF_Simplified:+1.0,ASgraded:+1.0,Age:+0.5,Sex:+0.5,NLRdis:-1.0,Stroke:-1.0,DM:-0.8,eGFR_DIS:-0.8,HBdis:-0.5};
+const VAR_LABELS={Age:'Age',Sex:'Sex',Stroke:'Prior stroke',DM:'Diabetes',HFplusLVEF_Simplified:'HF / LVEF',eGFR_DIS:'eGFR',NLRdis:'NLR',HBdis:'Haemoglobin',ASgraded:'Aortic stenosis'};
+
+const state={sex:1,stroke:0,dm:0,as:0,hf:0};
+let computedEGFR=NaN,computedNLR=NaN,ckdSex='male';
+let egfrMode='direct',nlrMode='direct';
+
+function syncCKDSexDisplay(){
+  const label=ckdSex==='female'?'Female':'Male';
+  const el=document.getElementById('ckd-sex-display');
+  if(el) el.textContent=label;
+}
+
+function setToggle(f,v,btn){
+  state[f]=v;
+  btn.closest('.toggle-group').querySelectorAll('.toggle-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function setSex(v,btn){
+  state.sex=v;
+  btn.closest('.toggle-group').querySelectorAll('.toggle-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  // Mirror to CKD-EPI — no separate toggle, just update state and display
+  ckdSex=v===2?'female':'male';
+  syncCKDSexDisplay();
+  computeEGFR();
+}
+
+function onAgeChange(){
+  const a=parseFloat(document.getElementById('age').value);
+  document.getElementById('egfr-age').value=(!isNaN(a)&&a>=18&&a<=110)?a:'';
+  computeEGFR();
+}
+
+function setEGFRMode(m,btn){
+  egfrMode=m;
+  btn.closest('.mode-tabs').querySelectorAll('.mode-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('egfr-direct').classList.toggle('hidden',m!=='direct');
+  document.getElementById('egfr-ckdepi').classList.toggle('hidden',m!=='ckdepi');
+  document.getElementById('egfr-err').classList.remove('show');
+  if(m==='direct') computedEGFR=NaN;
+  else { syncCKDSexDisplay(); computeEGFR(); }
+}
+
+function setNLRMode(m,btn){
+  nlrMode=m;
+  btn.closest('.mode-tabs').querySelectorAll('.mode-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('nlr-direct').classList.toggle('hidden',m!=='direct');
+  document.getElementById('nlr-components').classList.toggle('hidden',m!=='components');
+  document.getElementById('nlr-err').classList.remove('show');
+  if(m==='direct') computedNLR=NaN;
+}
+
+// CKD-EPI 2021 — creatinine in mg/dL
+function computeEGFR(){
+  if(egfrMode!=='ckdepi') return;
+  const cr=parseFloat(document.getElementById('creat').value);
+  const age=parseFloat(document.getElementById('egfr-age').value);
+  const disp=document.getElementById('egfr-display');
+  if(isNaN(cr)||isNaN(age)||cr<=0||age<18){
+    disp.textContent='Enter creatinine';disp.className='computed-value na';computedEGFR=NaN;return;
+  }
+  const f=ckdSex==='female';
+  const k=f?0.7:0.9,a=f?-0.241:-0.302,sf=f?1.012:1.0;
+  const r=cr/k;
+  const egfr=142*Math.pow(Math.min(r,1),a)*Math.pow(Math.max(r,1),-1.200)*Math.pow(0.9938,age)*sf;
+  computedEGFR=Math.round(egfr*10)/10;
+  if(computedEGFR<3||computedEGFR>200){
+    disp.textContent='Check inputs';disp.className='computed-value na';computedEGFR=NaN;
+  } else {
+    disp.textContent=computedEGFR.toFixed(1)+' mL/min/1.73m²';disp.className='computed-value';
+  }
+}
+
+function computeNLR(){
+  if(nlrMode!=='components') return;
+  const n=parseFloat(document.getElementById('neut').value);
+  const l=parseFloat(document.getElementById('lymph').value);
+  const disp=document.getElementById('nlr-display');
+  const err=document.getElementById('nlr-err');
+  if(isNaN(n)||isNaN(l)){disp.textContent='Enter counts';disp.className='computed-value na';computedNLR=NaN;return;}
+  if(l<=0){disp.textContent='Invalid';disp.className='computed-value na';err.classList.add('show');computedNLR=NaN;return;}
+  err.classList.remove('show');
+  computedNLR=n/l;
+  disp.textContent=computedNLR.toFixed(2);disp.className='computed-value';
+}
+
+function getEGFR(){return egfrMode==='direct'?parseFloat(document.getElementById('egfr-val').value):computedEGFR;}
+function getNLR(){return nlrMode==='direct'?parseFloat(document.getElementById('nlr-val').value):computedNLR;}
+
+function validate(){
+  let ok=true;
+  const age=parseFloat(document.getElementById('age').value);
+  if(isNaN(age)||age<18||age>110){document.getElementById('age').classList.add('error');document.getElementById('age-err').classList.add('show');ok=false;}
+  else{document.getElementById('age').classList.remove('error');document.getElementById('age-err').classList.remove('show');}
+  const egfr=getEGFR();const ee=document.getElementById('egfr-err');
+  if(isNaN(egfr)||egfr<5||egfr>200){ee.classList.add('show');ee.textContent=egfrMode==='direct'?'Please enter eGFR between 5–200':'Could not calculate eGFR — check inputs';ok=false;}
+  else ee.classList.remove('show');
+  const nlr=getNLR();const ne=document.getElementById('nlr-err');
+  if(isNaN(nlr)||nlr<0.5||nlr>50){ne.classList.add('show');ne.textContent=nlrMode==='direct'?'Please enter NLR between 0.5–50':'Please enter neutrophil and lymphocyte counts';ok=false;}
+  else ne.classList.remove('show');
+  const hb=parseFloat(document.getElementById('hb').value);
+  if(isNaN(hb)||hb<4||hb>20){document.getElementById('hb').classList.add('error');document.getElementById('hb-err').classList.add('show');ok=false;}
+  else{document.getElementById('hb').classList.remove('error');document.getElementById('hb-err').classList.remove('show');}
+  return ok;
+}
+
+function computeLP(r){let lp=0;for(const v of Object.keys(COEFS))lp+=COEFS[v]*((r[v]-SCALER_MEAN[v])/SCALER_SCALE[v]);return lp;}
+function computeCIF(lp,H0,a){const c=1-Math.exp(-H0*Math.exp(lp));if(Math.abs(a)<1e-9)return c;return 1/(1+Math.exp(-(a+Math.log(c/Math.max(1-c,1e-9)))));}
+function computeMBS(r){
+  let ce=0,at=0;const ct={};
+  for(const v of Object.keys(MBS_WEIGHTS)){
+    const w=Math.abs(COEFS[v]*((r[v]-SCALER_MEAN[v])/SCALER_SCALE[v]))*MBS_WEIGHTS[v];
+    ct[v]=w;if(w>0)ce+=w;else at+=Math.abs(w);
+  }
+  const t=ce+at;return{mbs:t>0?(ce-at)/t:0,contribs:ct};
+}
+function cfCIF(b,lb,lc){return 1-Math.pow(Math.max(1-b,1e-9),Math.exp(lc-lb));}
+
+const CDSS={
+  '1_at':{urgency:'routine',label:'Routine Action',lines:['Reassure — low absolute risk','Optimise antiplatelet + statin','BP/glycaemic control. No urgent workup']},
+  '1_mix':{urgency:'routine',label:'Routine Action',lines:['Reassure — low absolute risk','Standard vascular prevention','Selective Holter if symptomatic']},
+  '1_ce':{urgency:'routine',label:'Routine Action',lines:['Reassure — low absolute risk','Echocardiographic assessment','Opportunistic rhythm recording']},
+  '2_at':{urgency:'timely',label:'Timely Action',lines:['High-intensity statin ± ezetimibe','Antiplatelet + BP target <130/80','Neurovascular imaging if not done']},
+  '2_mix':{urgency:'timely',label:'Timely Action',lines:['Antiplatelet + statin optimisation','Holter 3–7 days + echo reassessment','Neurovascular imaging. 3-month review']},
+  '2_ce':{urgency:'timely',label:'Timely Action',lines:['Prolonged rhythm monitoring ≥7 days','Consider ILR if LA enlarged or HF','If AF detected → OAC. No routine OAC']},
+  '3_at':{urgency:'priority',label:'Priority Action',lines:['Intensive statin ± ezetimibe ± PCSK9i','Antiplatelet. BP target <120/80','Mandatory neurovascular imaging']},
+  '3_mix':{urgency:'priority',label:'Priority Action',lines:['Vascular prevention + ILR considered','Neurovascular imaging','MDT review (cardiology + neurology)']},
+  '3_ce':{urgency:'urgent',label:'Urgent Action',lines:['ILR within 4 weeks','Cardiac imaging: LA size, valves, LVEF','EP referral. OAC if AF detected']},
+};
+
+function calculate(){
+  if(!validate()) return;
+  const raw={Age:parseFloat(document.getElementById('age').value),Sex:state.sex,Stroke:state.stroke,DM:state.dm,HFplusLVEF_Simplified:state.hf,eGFR_DIS:getEGFR(),NLRdis:getNLR(),HBdis:parseFloat(document.getElementById('hb').value),ASgraded:state.as};
+  const lp=computeLP(raw);
+  const cif2=computeCIF(lp,H0_2YR,RECAL_A_2YR);
+  const cif5=computeCIF(lp,H0_5YR,RECAL_A_5YR);
+
+  let tier,tl,tc;
+  if(lp<LP_CUT_LOW){tier=1;tl='● Low Risk';tc='low';}
+  else if(lp<LP_CUT_HIGH){tier=2;tl='● Intermediate Risk';tc='intermediate';}
+  else{tier=3;tl='● High Risk';tc='high';}
+
+  const{mbs,contribs}=computeMBS(raw);
+  let mc,ml,mclass;
+  if(mbs>0.30){mc='ce';ml='● Cardioembolic';mclass='ce';}
+  else if(mbs<-0.30){mc='at';ml='● Atherothrombotic';mclass='at';}
+  else{mc='mix';ml='● Mixed / Uncertain';mclass='mixed';}
+
+  document.getElementById('placeholder').style.display='none';
+  const rd=document.getElementById('risk-display');rd.style.display='block';
+  rd.querySelectorAll('.animate-in').forEach(el=>{el.style.animation='none';el.offsetHeight;el.style.animation='';});
+
+  // Section A
+  document.getElementById('lp-val').textContent=lp.toFixed(3);
+  document.getElementById('cif2').textContent=(cif2*100).toFixed(1)+'%';
+  document.getElementById('cif5').textContent=(cif5*100).toFixed(1)+'%';
+  document.getElementById('cif2').className='cif-value '+tc;
+  document.getElementById('cif5').className='cif-value '+tc;
+  const tb=document.getElementById('tier-badge');tb.textContent=tl;tb.className='risk-tier-badge '+tc;
+  const c5=cif5*100;let bp;
+  if(c5<1)bp=c5*33;else if(c5<3)bp=33+((c5-1)/2)*33;else bp=Math.min(66+((c5-3)/5)*34,98);
+  document.getElementById('risk-thumb').style.left=bp+'%';
+
+  // Section B
+  const mbsColor=mc==='ce'?'var(--ce)':mc==='at'?'var(--at)':'var(--mix)';
+  document.getElementById('mbs-val').textContent=mbs.toFixed(3);
+  document.getElementById('mbs-val').style.color=mbsColor;
+  document.getElementById('mbs-val-header').textContent=mbs.toFixed(3);
+  document.getElementById('mbs-val-header').style.color=mc==='ce'?'#fca5a5':mc==='at'?'#93c5fd':'rgba(255,255,255,0.45)';
+  const mb=document.getElementById('mbs-badge');mb.textContent=ml;mb.className='mbs-badge '+mclass;
+  document.getElementById('mbs-thumb').style.left=Math.max(2,Math.min(98,((mbs+1)/2)*100))+'%';
+
+  // SHAP bars
+  const vars=Object.keys(contribs);
+  const mx=Math.max(...vars.map(v=>Math.abs(contribs[v])),0.001);
+  document.getElementById('shap-bars').innerHTML=vars
+    .sort((a,b)=>Math.abs(contribs[b])-Math.abs(contribs[a]))
+    .map(v=>{
+      const val=contribs[v],p=(Math.abs(val)/mx)*100,isCE=val>0;
+      const col=isCE?'var(--ce)':'var(--at)';
+      return`<div class="shap-row"><div class="shap-var-name">${VAR_LABELS[v]}</div><div class="shap-bar-track"><div class="shap-bar-fill" style="width:${p.toFixed(1)}%;background:${col};opacity:0.75"></div></div><div class="shap-val" style="color:${col}">${isCE?'CE':'AT'} ${isCE?'+':''}${val.toFixed(3)}</div></div>`;
+    }).join('');
+
+  // Section C
+  const d=CDSS[`${tier}_${mc}`];
+  if(d) document.getElementById('cdss-content').innerHTML=
+    `<div class="cdss-card ${d.urgency}"><div class="cdss-urgency ${d.urgency}">${d.label}</div><div class="cdss-action">${d.lines.map(l=>`<div class="cdss-action-line">${l}</div>`).join('')}</div></div>`;
+
+  // Section D
+  const r1={...raw};if(r1.NLRdis>3)r1.NLRdis=3;if(r1.HBdis<13)r1.HBdis=13;r1.eGFR_DIS=Math.min(r1.eGFR_DIS+15,120);
+  const r2={...raw};if(r2.HFplusLVEF_Simplified>=2)r2.HFplusLVEF_Simplified--;r2.ASgraded=0;
+  const r3={...raw};if(r3.NLRdis>3)r3.NLRdis=3;if(r3.HBdis<13)r3.HBdis=13;r3.eGFR_DIS=Math.min(r3.eGFR_DIS+15,120);if(r3.HFplusLVEF_Simplified>=2)r3.HFplusLVEF_Simplified--;r3.ASgraded=0;
+  const scenarios=[
+    {label:'Atherothrombotic optimisation',detail:'Statin/anti-inflam · Anaemia Rx · Renal protection (+15 eGFR)',delta:(cif5-cfCIF(cif5,lp,computeLP(r1)))*100},
+    {label:'Cardiac structural intervention',detail:'GDMT for HFrEF · TAVI/SAVR if AS present',delta:(cif5-cfCIF(cif5,lp,computeLP(r2)))*100},
+    {label:'Combined optimisation',detail:'All modifiable risk factors simultaneously',delta:(cif5-cfCIF(cif5,lp,computeLP(r3)))*100},
+  ];
+  document.getElementById('cf-content').innerHTML=`
+    <div class="section-label" style="margin-bottom:9px">Baseline 5-yr risk: ${(cif5*100).toFixed(1)}% &nbsp;·&nbsp; Projected risk if factors optimised</div>
+    ${scenarios.map(s=>{
+      const nr=Math.max(0,cif5*100-s.delta).toFixed(1);
+      return`<div class="cf-scenario">
+        <div><div class="cf-scenario-label">${s.label}</div><div class="cf-scenario-detail">${s.detail}</div></div>
+        <div style="text-align:right;flex-shrink:0;margin-left:12px">
+          <div class="cf-delta ${s.delta>0.005?'':'zero'}">${s.delta>0.005?`−${s.delta.toFixed(2)}%`:'No change'}</div>
+          ${s.delta>0.005?`<div class="cf-new-risk">→ ${nr}%</div>`:''}
+        </div>
+      </div>`;
+    }).join('')}`;
+
+  if(window.innerWidth<860) document.getElementById('risk-display').scrollIntoView({behavior:'smooth'});
+}
+</script>
+</body>
+</html>
